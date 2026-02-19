@@ -1,0 +1,104 @@
+<!-- Health Check Endpoint Test -->
+<!-- Open this in browser to test the backend -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CYBERFUNK Backend Health Check</title>
+    <style>
+        body { font-family: monospace; margin: 20px; background: #1a1a2e; color: #fff; }
+        h1 { color: #00ff00; }
+        .status-ok { color: #00ff00; }
+        .status-error { color: #ff0000; }
+        pre { background: #16213e; padding: 10px; border-radius: 5px; overflow-x: auto; }
+        input { padding: 5px; width: 300px; margin-right: 5px; }
+        button { padding: 5px 15px; background: #00ff00; color: black; border: none; cursor: pointer; }
+        button:hover { background: #00cc00; }
+    </style>
+</head>
+<body>
+    <h1>🎮 CYBERFUNK Backend Health Check</h1>
+    
+    <h2>Configuration</h2>
+    <label>API URL: </label>
+    <input type="text" id="apiUrl" value="http://localhost:3000" />
+    <button onclick="testHealth()">Test Connection</button>
+    
+    <h2>Results</h2>
+    <div id="results"></div>
+    
+    <h2>API Endpoints Available</h2>
+    <ul>
+        <li>GET /api/health - Server status</li>
+        <li>GET /api/high-scores - Get top 10 scores</li>
+        <li>POST /api/submit-score - Submit a new score</li>
+    </ul>
+    
+    <h2>Test Submit Score</h2>
+    <input type="text" id="playerName" placeholder="Player Name" value="TEST_PLAYER" />
+    <input type="number" id="score" placeholder="Score" value="50000" />
+    <input type="number" id="level" placeholder="Level" value="15" />
+    <button onclick="submitScore()">Submit Score</button>
+    
+    <script>
+        async function testHealth() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                resultsDiv.innerHTML = '<p class="status-ok">Testing...</p>';
+                
+                const response = await fetch(`${apiUrl}/api/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultsDiv.innerHTML = `
+                        <p class="status-ok">✅ Server is running!</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultsDiv.innerHTML = `<p class="status-error">❌ Server error: ${response.status}</p>`;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<p class="status-error">❌ Connection failed: ${error.message}</p>`;
+            }
+        }
+        
+        async function submitScore() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const playerName = document.getElementById('playerName').value;
+            const score = parseInt(document.getElementById('score').value);
+            const level = parseInt(document.getElementById('level').value);
+            const resultsDiv = document.getElementById('results');
+            
+            try {
+                resultsDiv.innerHTML = '<p>Submitting...</p>';
+                
+                const response = await fetch(`${apiUrl}/api/submit-score`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        playerName: playerName,
+                        score: score,
+                        levelReached: level
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultsDiv.innerHTML = `
+                        <p class="status-ok">✅ Score submitted!</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultsDiv.innerHTML = `<p class="status-error">❌ Submission failed: ${response.status}</p>`;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<p class="status-error">❌ Error: ${error.message}</p>`;
+            }
+        }
+        
+        window.onload = testHealth;
+    </script>
+</body>
+</html>
