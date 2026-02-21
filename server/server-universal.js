@@ -8,25 +8,13 @@ app.use(express.json());
 // CORS configuration
 const corsOptions = {
   origin: (origin, callback) => {
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:5000',
-      'http://localhost:5500',
-      'https://itch.io',
-      'https://*.itch.io',
-      process.env.SUPABASE_URL
-    ];
-    
-    if (!origin || allowedOrigins.some(allowed => {
-      if (allowed.includes('*')) return origin.includes(allowed.replace('*', ''));
-      return origin === allowed;
-    })) {
-      callback(null, true);
-    } else {
-      callback(new Error('CORS not allowed'));
-    }
+    // Allow all origins for deployed version (requests with no origin are fine too)
+    // This is safe because the API only stores scores, no sensitive operations
+    callback(null, true);
   },
-  credentials: true
+  credentials: false,
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type']
 };
 
 app.use(cors(corsOptions));
