@@ -42,9 +42,13 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+// Handle preflight requests
+app.options('*', cors(corsOptions));
+
 // ✅ GET - Fetch all high scores
 app.get('/api/high-scores', async (req, res) => {
   try {
+    console.log('Fetching high scores...');
     const { data, error } = await supabase
       .from('high_scores')
       .select('*')
@@ -53,10 +57,11 @@ app.get('/api/high-scores', async (req, res) => {
 
     if (error) throw error;
 
+    console.log(`Returning ${data.length} scores`);
     res.json(data || []);
   } catch (error) {
     console.error('Error fetching scores:', error);
-    res.status(500).json({ error: 'Failed to fetch scores' });
+    res.status(500).json({ error: 'Failed to fetch scores', details: error.message });
   }
 });
 
@@ -64,6 +69,8 @@ app.get('/api/high-scores', async (req, res) => {
 app.post('/api/high-scores', async (req, res) => {
   try {
     const { playerName, score, levelReached } = req.body;
+
+    console.log(`Received score submission: ${playerName} - ${score}`);
 
     // Validation
     if (!playerName || score === undefined) {
@@ -104,6 +111,7 @@ app.post('/api/high-scores', async (req, res) => {
       const highestExisting = Math.max(...matchingScores.map(s => s.score));
       
       if (score <= highestExisting) {
+        console.log(`❌ New score ${score} not higher than existing ${highestExisting}`);
         return res.status(400).json({
           success: false,
           error: `Your existing score of ${highestExisting} is higher!`,
