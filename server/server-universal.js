@@ -86,7 +86,15 @@ app.post('/api/high-scores', async (req, res) => {
       .select('id, score, player_name')
       .order('score', { ascending: false });
 
-    if (fetchError) throw fetchError;
+    if (fetchError) {
+      console.error('❌ Error fetching existing scores:', fetchError);
+      throw fetchError;
+    }
+
+    console.log(`📊 Total scores in database: ${allExistingScores?.length || 0}`);
+    if (allExistingScores && allExistingScores.length > 0) {
+      console.log(`📋 Sample scores: ${allExistingScores.slice(0, 5).map(s => `${s.player_name}(${s.score})`).join(', ')}`);
+    }
 
     // Helper function to sanitize names for comparison (same as initial sanitization)
     const sanitizeName = (name) => {
@@ -97,12 +105,21 @@ app.post('/api/high-scores', async (req, res) => {
         .trim();
     };
 
+    console.log(`🔍 Looking for matches for: "${playerName}" → sanitized to: "${filteredName}"`);
+
     // Find ALL scores for this player (sanitize both old and new names for comparison)
     const matchingScores = allExistingScores
-      ? allExistingScores.filter(s => sanitizeName(s.player_name) === filteredName)
+      ? allExistingScores.filter(s => {
+          const oldSanitized = sanitizeName(s.player_name);
+          const isMatch = oldSanitized === filteredName;
+          if (isMatch || allExistingScores.length <= 10) {
+            console.log(`  "${s.player_name}" → "${oldSanitized}" [${isMatch ? '✅ MATCH' : '❌'}]`);
+          }
+          return isMatch;
+        })
       : [];
 
-    console.log(`Found ${matchingScores.length} existing scores for player "${filteredName}"`);
+    console.log(`✔️ Found ${matchingScores.length} existing scores for player "${filteredName}"`);
 
     // If player has any existing scores, check if new score is higher
     if (matchingScores.length > 0) {
@@ -119,18 +136,19 @@ app.post('/api/high-scores', async (req, res) => {
       }
       
       // Delete ALL old scores for this player before adding the new one
-      console.log(`🗑️  Deleting ${matchingScores.length} old score(s) for ${filteredName}...`);
+      console.log(`🗑️  Attempting to delete ${matchingScores.length} old score(s) for "${filteredName}"...`);
       for (const oldScore of matchingScores) {
+        console.log(`  → Deleting ID ${oldScore.id}: ${oldScore.player_name} (${oldScore.score})`);
         const { error: deleteError } = await supabase
           .from('high_scores')
           .delete()
           .eq('id', oldScore.id);
         
         if (deleteError) {
-          console.error(`❌ Failed to delete score ID ${oldScore.id}:`, deleteError);
+          console.error(`❌ FAILED to delete score ID ${oldScore.id}:`, deleteError);
           throw deleteError;
         }
-        console.log(`✅ Removed old score for ${filteredName}: ${oldScore.score} (ID: ${oldScore.id})`);
+        console.log(`  ✅ Successfully deleted ID ${oldScore.id}`);
       }
     }
 
