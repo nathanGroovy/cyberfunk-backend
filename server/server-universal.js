@@ -88,10 +88,21 @@ app.post('/api/high-scores', async (req, res) => {
 
     if (fetchError) throw fetchError;
 
-    // Find ALL scores for this player (case-insensitive comparison)
+    // Helper function to sanitize names for comparison (same as initial sanitization)
+    const sanitizeName = (name) => {
+      return (name || '')
+        .substring(0, 50)
+        .toUpperCase()
+        .replace(/[^A-Z0-9_\s-]/g, '_')
+        .trim();
+    };
+
+    // Find ALL scores for this player (sanitize both old and new names for comparison)
     const matchingScores = allExistingScores
-      ? allExistingScores.filter(s => (s.player_name || '').toUpperCase() === filteredName.toUpperCase())
+      ? allExistingScores.filter(s => sanitizeName(s.player_name) === filteredName)
       : [];
+
+    console.log(`Found ${matchingScores.length} existing scores for player "${filteredName}"`);
 
     // If player has any existing scores, check if new score is higher
     if (matchingScores.length > 0) {
@@ -108,6 +119,7 @@ app.post('/api/high-scores', async (req, res) => {
       }
       
       // Delete ALL old scores for this player before adding the new one
+      console.log(`🗑️  Deleting ${matchingScores.length} old score(s) for ${filteredName}...`);
       for (const oldScore of matchingScores) {
         const { error: deleteError } = await supabase
           .from('high_scores')
