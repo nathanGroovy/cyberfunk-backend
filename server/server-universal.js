@@ -22,13 +22,24 @@ app.use(cors(corsOptions));
 // Supabase Setup
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   console.error('Missing Supabase credentials in .env file');
   console.error('Set SUPABASE_URL and SUPABASE_ANON_KEY');
 }
 
+// Client for reading data (uses anon key)
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// Client for admin operations like delete (uses service role key if available)
+let supabaseAdmin = supabase;
+if (SUPABASE_SERVICE_ROLE_KEY) {
+  supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  console.log('✅ Service role key available for admin operations');
+} else {
+  console.warn('⚠️ Service role key not available - will use anon key for deletes');
+}
 
 // Handle preflight requests
 app.options('*', cors(corsOptions));
@@ -139,7 +150,7 @@ app.post('/api/high-scores', async (req, res) => {
       console.log(`🗑️  Attempting to delete ${matchingScores.length} old score(s) for "${filteredName}"...`);
       for (const oldScore of matchingScores) {
         console.log(`  → Deleting ID ${oldScore.id}: ${oldScore.player_name} (${oldScore.score})`);
-        const { error: deleteError } = await supabase
+        const { error: deleteError } = await supabaseAdmin
           .from('high_scores')
           .delete()
           .eq('id', oldScore.id);
